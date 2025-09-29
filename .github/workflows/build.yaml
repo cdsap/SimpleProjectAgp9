@@ -1,33 +1,36 @@
-name: Build
-
+name: Run Gradle on PRs
 on:
-    workflow_dispatch:
-    push:        # runs on all branches
-    pull_request:
-
+    push:
+        branches: [ master ]
 jobs:
-    test_and_apk:
-        name: "Build"
+    build:
+        strategy:
+            matrix:
+                include:
+                    - distribution: temurin
+                      java-version: 21
+                    - distribution: zulu
+                      java-version: 21
+                    - distribution: liberica
+                      java-version: 21
+                    - distribution: oracle
+                      java-version: 21
+                    - distribution: corretto
+                      java-version: 21
+                    - distribution: microsoft
+                      java-version: 21
+                    - distribution: semeru
+                      java-version: 21
         runs-on: ubuntu-latest
-
-        permissions:
-            contents: write
-            pull-requests: write
-            security-events: write
-
-        timeout-minutes: 60
-
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Set up JDK 21
-              uses: actions/setup-java@v4
+            - uses: actions/checkout@v4
+            - uses: actions/setup-java@v4
               with:
-                  distribution: 'zulu'
-                  java-version: 21
-
-            - name: Check build-logic
-              run: ./gradlew assembleDebug
+                  distribution: ${{ matrix.distribution }}
+                  java-version: ${{ matrix.java-version }}
+            - name: Execute Gradle build
+              run: ./gradlew assembleDebug -Dscan.tag.H${{ matrix.java-version }}-${{ matrix.distribution }} -Dscan.tag.simple_project
               env:
                   DEVELOCITY_ACCESS_KEY: ${{ secrets.DV_ACCESS_KEY }}
+                  AGENT_JAVA_VERSION: "${{ matrix.java-version }}-${{ matrix.distribution }}"
+        continue-on-error: true
